@@ -67,8 +67,8 @@ nt!PopFanWorker+0x17b
 nt!IofCallDriver+0x55
 ```
 
-[DumpStackFrames.js](./DumpStackFrames.js) decodes the stack pointers. Copy them to clipboard
-and `.scriptrun`.
+[DumpStackFrames.js](https://github.com/armaber/drivers/blob/main/PciFilter/DumpStackFrames.js)
+decodes the stack pointers. Copy them to clipboard and `.scriptrun`.
 
 ---
 
@@ -79,22 +79,38 @@ This key is interpreted by the OS. The other 2 key types are:
 - driver registry operating on driver scope
 - device software registry interpreted by the FDO
 
-The hardware key can be accessed without an .inf through *SetupAPI* calls. [SetupFilter.ps1](./SetupFilter.ps1) 
-handles both installation and uninstallation of a filter. An .inf file provisions filter installation
-for devices that are not plugged, ie *software first* installation, while the script acts on existing
-devices.
+The hardware key can be accessed without an .inf through *SetupAPI* calls.
+[SetupFilter.ps1](https://github.com/armaber/drivers/blob/main/PciFilter/SetupFilter.ps1) handles both
+installation and uninstallation of a filter. An .inf file provisions filter installation for devices
+that are not plugged, ie *software first* installation, while the script acts on existing devices.
 
 Using *SetupAPI* expedites deployment in production, where drivers must be certified. The .sys
 image is signed once, while .inf package must be re-certified whenever *HardwareID* is modified.
 
+Install the filter on a specific device with `.\SetupFilter.ps1 -DeviceId <Value>` where
+*Value* is taken from Device Manager &#x2192; Properties &#x2192; Details &#x2192; `Device instance path`.
+Omit `-DeviceId` switch to install it below the SystemClass.
+
 ---
 
-The build target is x64. Project file enables static analysis on build and clang-tidy. There is a
-bug in Visual Studio, where default project wizard inserts a `%(ClCompile.AdditionalOptions)` in
-*Project Properties &#x2192; C/C++ &#x2192; All Options &#x2192; AdditionalOptions*, preventing the
-build. This shortcoming is bypassed.
+`PciFilter.vcxproj` build target is x64. The project is generated with:
 
-If new IOCTLs are discovered, besides those interpreted in [definitions.h](./definitions.h), then obtain
+```powershell
+$CerFile = "..\setup\testcertificate.cer";
+if (-not (Test-Path $CerFile)) {
+      $CerFile = $null;
+}
+$genArgs = @{
+      Wdm = $true;
+      Service = $true;
+      CertificatePath = $CerFile;
+      NtddiVersion = "NTDDI_WIN10_RS2";
+}
+& ..\build\GenerateVcxproj.ps1 PciFilter @genArgs;
+```
+Source code assumes device IOCTL processing at PASSIVE_LEVEL, following *ZwDeviceIoControl* model.
+If new IOCTLs are discovered, besides those interpreted in 
+[definitions.h](https://github.com/armaber/drivers/blob/main/PciFilter/definitions.h), then obtain
 the human readable macro through [IoDecode.ps1](https://github.com/armaber/scripts/blob/main/DecodeIoctl/IoDecode.ps1).
 
 The default stack frame size might limit the capture to a myriad of frames belonging to `Wdf01000.sys`
@@ -103,22 +119,15 @@ image. Increase as needed.
 A filter driver can be developed in KMDF, with detours into WDM such as *EVT_WDFDEVICE_WDM_IRP_PREPROCESS*.
 WDM is suitable for all refinements.
 
----
+CodeQL coverage for `microsoft/windows-drivers:windows-driver-suites/mustfix.qls` rules passed.
 
-Notes:
+- `windows-driver-suites/recommended.qls` reports are pedantic with false positives
+   <details><summary>sarif results</summary>
 
-- Source code assumes device IOCTL processing at PASSIVE_LEVEL, following *ZwDeviceIoControl* model.
-- Install the filter on a specific device with `.\SetupFilter.ps1 -Install -DeviceId <Value>` where
-*Value* is taken from Device Manager &#x2192; Properties &#x2192; Details &#x2192; `Device instance path`
-- CodeQL `microsoft/windows-drivers:windows-driver-suites/mustfix.qls` rules passed.
-  - `windows-driver-suites/recommended.qls` reports are pedantic with false positives
-      <details><summary>sarif results</summary>
-
-      |Tool|Severity|Code|Description|Location|Line|
-      |---|---|---|---|---|---|
-      |CodeQL|warning|cpp/drivers/<br>illegal-field-access-2|The 'Type' field of the highestDO struct cannot be accessed by a driver.|driver.c|83|
-      |CodeQL|warning|cpp/drivers/<br>operand-assignment|An assignment has been made to an operand \[Flags\](1), which should only be modified using bit sets and clears.|driver.c|156|
-      |CodeQL|warning|cpp/padding<br>byteinformationdisclosure|Memory allocation of \[_STACK_HASH_TRACE\](1) includes uninitialized padding bytes.|driver.c|585|
-      |CodeQL|note|cpp/drivers/<br>wrong-dispatch-table-assignment|Dispatch table assignment should have a DRIVER_DISPATCH type routine as its right-hand side value.|driver.c|53|
-
-      </details>
+   |Tool|Severity|Code|Description|Location|Line|
+   |---|---|---|---|---|---|
+   |CodeQL|warning|cpp/drivers/<br>illegal-field-access-2|The 'Type' field of the highestDO struct cannot be accessed by a driver.|river.c|83|
+   |CodeQL|warning|cpp/drivers/<br>operand-assignment|An assignment has been made to an operand \[Flags\](1), which should only be odified using bit sets and clears.|driver.c|156|
+   |CodeQL|warning|cpp/padding<br>byteinformationdisclosure|Memory allocation of \[_STACK_HASH_TRACE\](1) includes uninitialized adding bytes.|driver.c|585|
+   |CodeQL|note|cpp/drivers/<br>wrong-dispatch-table-assignment|Dispatch table assignment should have a DRIVER_DISPATCH type outine as its right-hand side value.|driver.c|53|
+   </details>

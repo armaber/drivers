@@ -2,11 +2,10 @@
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
         <SignMode>TestSign</SignMode>
-        <TestCertificate>InsertOwnCertificate</TestCertificate>
+        <TestCertificate>@TestCertificate@</TestCertificate>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
         <SignMode>TestSign</SignMode>
-        <TestCertificate>InsertOwnCertificate</TestCertificate>
+        <TestCertificate>@TestCertificate@</TestCertificate>
     </PropertyGroup>
 </Project>
-

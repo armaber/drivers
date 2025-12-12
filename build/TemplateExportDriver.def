@@ -1,0 +1,5 @@
+NAME @ProjectName@.sys
+
+EXPORTS
+    DllInitialize PRIVATE
+    DllUnload PRIVATE
