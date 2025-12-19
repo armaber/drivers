@@ -8,7 +8,9 @@ leaves several insights obscured.*
 ---
 
 **A class driver** interacts with device drivers that implement different technologies. The upper 
-edge, be it an application or a driver, has an unified representation.
+edge, be it an application or a driver, has an unified representation. *DiskDrive* class handles
+incoming IRPs for either NVMe or SATA storage; *Keyboard* class handles input from USB or bluetooth
+connected devices.
 
 Every PnP driver package specifies a *Class* in `.inf` setup. Windows allows development of 2
 types of filter drivers:
@@ -39,7 +41,7 @@ Some `Parameters.DeviceIoControl.IoControlCode` are not found in the official he
 parallel, the stack trace is protected by an output mutex. To reduce cluttering, identical stacks
 are referenced by the hash of the 1<sup>st</sup> occurrence.
 
-```.text
+```text
 Call MJ_INTERNAL_DEVICE_CONTROL on 0xFFFFC006E64EAD50 @00:1F.7=ACPI\VEN_PNP&DEV_0C0B
 Code 0x294244 undocumented on 0xFFFFC006E64EAD50 @00:1F.7=ACPI\VEN_PNP&DEV_0C0B
 Stack 0xFFFFF8062F01A144
@@ -123,11 +125,12 @@ CodeQL coverage for `microsoft/windows-drivers:windows-driver-suites/mustfix.qls
 
 - `windows-driver-suites/recommended.qls` reports are pedantic with false positives
    <details><summary>sarif results</summary>
-
+   
    |Tool|Severity|Code|Description|Location|Line|
    |---|---|---|---|---|---|
-   |CodeQL|warning|cpp/drivers/<br>illegal-field-access-2|The 'Type' field of the highestDO struct cannot be accessed by a driver.|river.c|83|
+   |CodeQL|warning|cpp/drivers/<br>illegal-field-access-2|The 'Type' field of the highestDO struct cannot be accessed by a driver.|driver.c|83|
    |CodeQL|warning|cpp/drivers/<br>operand-assignment|An assignment has been made to an operand \[Flags\](1), which should only be odified using bit sets and clears.|driver.c|156|
    |CodeQL|warning|cpp/padding<br>byteinformationdisclosure|Memory allocation of \[_STACK_HASH_TRACE\](1) includes uninitialized adding bytes.|driver.c|585|
    |CodeQL|note|cpp/drivers/<br>wrong-dispatch-table-assignment|Dispatch table assignment should have a DRIVER_DISPATCH type outine as its right-hand side value.|driver.c|53|
+
    </details>
